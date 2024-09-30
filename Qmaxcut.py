@@ -6,6 +6,7 @@ from qiskit_optimization.applications import Maxcut
 from qiskit_optimization.algorithms.qrao import QuantumRandomAccessEncoding
 import numpy as np
 import networkx as nx
+from qiskit.quantum_info import SparsePauliOp
 
 #make initial states
 def plus_states(n):  #n= number of qubits
@@ -18,6 +19,8 @@ def problemHamiltonian(p):  #takes in problem made by encode
     print("Offset:", offset)
     print("Ising Hamiltonian:")
     print(str(qubitOp))
+    
+    return qubitOp, offset
 #makes an ising hamiltonian -> how to translate this together with hypercube hamiltonian in circuit?
 
 

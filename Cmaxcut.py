@@ -1,10 +1,15 @@
 #non circuit calculations
 import numpy as np
 import scipy.sparse.linalg as linalgs
+import Qmaxcut
+import importlib
+importlib.reload(Qmaxcut)
 
 def problemHamiltonian(p):
-    #need to reformulate as Ising Hamiltonian
-    return p
+	qubitOp, offset=Qmaxcut.problemHamiltonian(p)
+	hamiltonian_matrix = qubitOp.to_matrix()
+	hamiltonian_matrix += hamiltonian_matrix + offset * np.eye(hamiltonian_matrix.shape[0])
+	return hamiltonian_matrix
 
 def hypercubeHamiltonian(n):  #hypercube walk hamiltonian
     X = np.array([[0, 1], [1, 0]])
@@ -39,12 +44,12 @@ def QWStep(H_cost, H_walk, gamma, t, initial_state):
 def QW(H_cost, H_walk, t, initial_state, gamma, steps):  #QW with gamma array and time array as input
 	state = initial_state
 	exp_val=np.zeros(len(gamma))
-	for i in len(gamma): #iterate over all gammas
+	for i in range(len(gamma)): #iterate over all gammas
 		gamma_step = gamma[i]
-		for step in range(steps):
-			t_step = t[i]
-			state = QWStep(H_cost, H_walk, gamma_step, t_step, state)
-			exp_val[i] = np.real(state.conj().T@H_cost@state)
+		#for step in range(steps):
+		t_step = t[i]
+		state = QWStep(H_cost, H_walk, gamma_step, t_step, state)
+		exp_val[i] = np.real(state.conj().T@H_cost@state)
 	return state, exp_val
 	
 
