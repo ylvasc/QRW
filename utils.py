@@ -59,6 +59,14 @@ def classical_max_cut_inbuilt(problem):
     result = exact.solve(problem)
     print(result.prettyprint())
 
+def problemHamiltonian(p):  #takes in problem made by encode
+    qubitOp, offset = p.to_ising() #outputs SparsePauliOp
+    print("Offset:", offset)
+    print("Ising Hamiltonian:")
+    print(str(qubitOp))
+    
+    return qubitOp, offset
+
 def encode(G):
 # Computing the weight matrix from the random graph
     nodes = list(G.nodes())
@@ -71,13 +79,12 @@ def encode(G):
                 w[i, j] = temp["weight"]
     print(w)
     max_cut = Maxcut(w)
+    
+   
+    
+
     max_cut_problem = max_cut.to_quadratic_program()
+
     print(max_cut_problem.prettyprint())
     return max_cut_problem
     
-
-def problemHamiltonian(p):  #takes in problem made by encode
-    qubitOp, offset = p.to_ising()
-    print("Offset:", offset)
-    print("Ising Hamiltonian:")
-    print(str(qubitOp))
