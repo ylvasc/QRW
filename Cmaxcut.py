@@ -135,7 +135,7 @@ def costLandscape(H_cost, H_walk, t, initial_state, gamma, offset): #only for de
 
     # Create the heatmap plot
     plt.figure(figsize=(8, 6))
-    plt.imshow(exp_val-offset, aspect='auto', origin='lower', 
+    plt.imshow(exp_val+offset, aspect='auto', origin='lower', 
                extent=[t[0], t[-1], gamma[0], gamma[-1]], cmap='viridis')
     plt.colorbar(label='Expectation Values')
     plt.xlabel('t')

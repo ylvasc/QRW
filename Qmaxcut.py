@@ -9,7 +9,7 @@ import networkx as nx
 from qiskit.quantum_info import SparsePauliOp
 
 #make initial states
-def plus_states(n):  #n= number of qubits
+def plusStates(n):  #n= number of qubits
         q = QuantumRegister(n)
         circ = QuantumCircuit(q)
         circ.h(q)

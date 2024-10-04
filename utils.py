@@ -7,15 +7,16 @@ from qiskit_algorithms import SamplingVQE, NumPyMinimumEigensolver
 from qiskit_optimization.algorithms import MinimumEigenOptimizer
 from qiskit_optimization.applications import Maxcut
 from qiskit_optimization.algorithms.qrao import QuantumRandomAccessEncoding
+import random
 
-def create_graph(nodes, w_edges):
+def createGraph(nodes, w_edges):
     G = nx.Graph()
     G.add_nodes_from(nodes)
     G.add_weighted_edges_from(w_edges)
     return G
 
 # Calculate the classical Max-Cut value (not using quantum here)
-def classical_max_cut(G):
+def classicalMaxcut(G):
     # Extract nodes and their weights
     nodes = list(G.nodes())
     node_weights = nx.get_node_attributes(G, 'weight')
@@ -46,7 +47,7 @@ def classical_max_cut(G):
     return best_cut, best_cut_value
 
 
-def visualize_graph(G):
+def visualizeGraph(G):
     pos = nx.spring_layout(G)
     nx.draw(G, pos, with_labels=True, node_color='lightblue', edge_color='gray')
     edge_labels = nx.get_edge_attributes(G, "weight")
@@ -54,7 +55,7 @@ def visualize_graph(G):
 
     plt.show()
 
-def classical_max_cut_inbuilt(problem):
+def classicalMaxcutInbuilt(problem):
     exact = MinimumEigenOptimizer(NumPyMinimumEigensolver())
     result = exact.solve(problem)
     print(result.prettyprint())
@@ -79,12 +80,17 @@ def encode(G):
                 w[i, j] = temp["weight"]
     print(w)
     max_cut = Maxcut(w)
-    
-   
-    
-
     max_cut_problem = max_cut.to_quadratic_program()
 
     print(max_cut_problem.prettyprint())
     return max_cut_problem
     
+
+def createRandomGraph(num_nodes, edge_probability, weight_range=(0.1, 1)): 
+    # edge_probability: Probability of edge creation between any two nodes
+    # Create an Erdős-Rényi graph with a specified number of nodes and edge probability
+    G = nx.erdos_renyi_graph(num_nodes, edge_probability)
+    for (u, v) in G.edges():
+        G.edges[u, v]['weight'] = round(random.uniform(*weight_range), 2)  # Random weight within the given range
+    
+    return G
