@@ -5,6 +5,7 @@ import Qmaxcut
 import importlib
 from qiskit.quantum_info import SparsePauliOp
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 importlib.reload(Qmaxcut)
 
 def problemHamiltonianFromIsing(p):  #using inbuilt .to_ising() function
@@ -120,7 +121,7 @@ def QW(H_cost, H_walk, t, initial_state, gamma):
         #return state?
 	return exp_val
 
-def costLandscape(H_cost, H_walk, t, initial_state, gamma, offset): #only for depth 1!!!! 
+def costLandscape(H_cost, H_walk, t, initial_state, gamma, offset, fig=None): #only for depth 1!!!! 
     """
     Calculate and plot the cost landscape.
 
@@ -141,15 +142,34 @@ def costLandscape(H_cost, H_walk, t, initial_state, gamma, offset): #only for de
             gamma_value = np.array([gamma[j]])  # Current gamma value, made into array object
             exp_val[i, j] = QW(H_cost, H_walk, t_value, initial_state, gamma_value)
 
-    # Create the heatmap plot
-    plt.figure(figsize=(8, 6))
-    plt.imshow(exp_val+offset, aspect='auto', origin='lower', 
-               extent=[t[0], t[-1], gamma[0], gamma[-1]], cmap='viridis')
-    plt.colorbar(label='Expectation Values')
-    plt.xlabel('t')
-    plt.ylabel('gamma')
-    plt.title('Cost Landscape')
+    if fig is None:
+        fig = plt.figure(figsize=(6, 6), dpi=80, facecolor="w", edgecolor="k")
+        
+    ax = fig.gca()
+    ax.set_xlabel(r"$\gamma$")
+    ax.set_ylabel(r"$t$")
+    ax.set_title("Cost Landscape")
+    
+    # Prepare the data for imshow
+    im = ax.imshow(exp_val + offset, interpolation="bicubic", origin="lower", 
+                   extent=[gamma[0], gamma[-1], t[0], t[-1]], aspect='auto')
+
+    # Add colorbar
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    plt.colorbar(im, cax=cax)
+
     plt.show()
+
+    # Create the heatmap plot
+    #plt.figure(figsize=(8, 6))
+    #plt.imshow(exp_val+offset, aspect='auto', origin='lower', 
+               #extent=[t[0], t[-1], gamma[0], gamma[-1]], cmap='viridis')
+    #plt.colorbar(label='Expectation Values')
+    #plt.xlabel('t')
+    #plt.ylabel('gamma')
+    #plt.title('Cost Landscape')
+    #plt.show()
 
 
 
