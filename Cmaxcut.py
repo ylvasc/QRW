@@ -3,10 +3,11 @@ import numpy as np
 import scipy.sparse.linalg as linalgs
 import Qmaxcut
 import importlib
+from qiskit.quantum_info import SparsePauliOp
 import matplotlib.pyplot as plt
 importlib.reload(Qmaxcut)
 
-def problemHamiltonian(p):  #using inbuilt .to_ising() function
+def problemHamiltonianFromIsing(p):  #using inbuilt .to_ising() function
     """
     Create the problem (cost) Hamiltonian H_c by making the problem into a qubo with inbuilt functions. 
     Then uses inbuilt function .to_ising() to create Ising Hamiltionian, translated into matrix form.
@@ -21,43 +22,50 @@ def problemHamiltonian(p):  #using inbuilt .to_ising() function
     H_p = qubitOp.to_matrix()
     return H_p, offset
 
-def problemHamiltonianMatrix(G): 
+
+
+def problemHamiltonian(graph):
     """
-    Create the cost Hamiltonian H_c = 0.5 * sum_(i,j) w_(ij) (I - Z_i Z_j)
-    from graph.
+    Calculate the Hamiltonian matrix for a weighted Max-Cut problem using SparsePauliOp.
 
     Parameters:
-    - G: NetworkX graph, where edges have weights
+    graph (nx.Graph): A NetworkX graph with weights on the edges.
 
     Returns:
-    - H_p: numpy array representing the cost Hamiltonian matrix
+    np.ndarray: The Hamiltonian matrix for the Max-Cut problem.
     """
-    n = G.number_of_nodes()
-    dim = 2 ** n  #Dimension of the Hamiltonian matrix
-
-    H_p = np.zeros((dim, dim)) #Initialize matrix
-
-    for (i, j, weight) in G.edges(data=True):
-        weight = weight.get('weight', 1.0)  # Default to 1.0 if no weight is specified
+    n = graph.number_of_nodes()
+    
+    # Initialize the Hamiltonian as zero matrix
+    hamiltonian_matrix = np.zeros((2**n,2**n), dtype=complex)
+    #print(hamiltonian_matrix.shape)
+    
+    # Iterate through each edge in the graph
+    for i, j, data in graph.edges(data=True):
+        weight = data.get('weight', 1.0)  # Default weight to 1 if not specified
         
-        zz_term = np.zeros((dim, dim)) #Contribution of the ZZ term
+        # Create the Pauli string for the edge (i, j)
+        pauli = ['I'] * n
+        pauli[i] = 'Z'  # Z operator on node i
+        pauli[j] = 'Z'  # Z operator on node j
+        pauli_str = ''.join(pauli)
+
+        # Create the SparsePauliOp for the current edge
+        pauli_op = SparsePauliOp.from_list([(pauli_str, 1)])  # Coefficient is 1
+
+        # Convert to matrix and multiply by the weight
+        pauli_matrix = pauli_op.to_matrix()
         
-        for k in range(dim):
-            # Calculate the basis state
-            state1 = (k >> i) & 1  #Value of the i-th qubit
-            state2 = (k >> j) & 1  #Value of the j-th qubit
-            
-            if state1 == 0 and state2 == 0:
-                zz_term[k, k] = 1  # |00> state
-            elif state1 == 1 and state2 == 1:
-                zz_term[k, k] = 1  # |11> state
-            else:
-                zz_term[k, k] = 0  # Mixed states |01> and |10> yield no contribution
+        # Create identity matrix
+        identity_matrix = np.eye(pauli_matrix.shape[0], dtype=complex)
+        
+        # Make I-ZZ term for qubits i and j
+        matrix = identity_matrix - pauli_matrix
+        
+        # Create total matrix
+        hamiltonian_matrix += matrix*0.5*weight
 
-        # Add the term to the Hamiltonian
-        H_p += 0.5 * weight * (np.eye(dim) - zz_term)
-
-    return H_p
+    return hamiltonian_matrix*(-1) #-1 for minimization
 
 
 def hypercubeHamiltonian(n):  #hypercube walk hamiltonian
