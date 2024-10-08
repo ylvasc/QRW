@@ -146,13 +146,13 @@ def costLandscape(H_cost, H_walk, t, initial_state, gamma, offset, fig=None): #o
         fig = plt.figure(figsize=(6, 6), dpi=80, facecolor="w", edgecolor="k")
         
     ax = fig.gca()
-    ax.set_xlabel(r"$\gamma$")
-    ax.set_ylabel(r"$t$")
+    ax.set_xlabel(r"$t$")           
+    ax.set_ylabel(r"$\gamma$")      
     ax.set_title("Cost Landscape")
     
-    # Prepare the data for imshow
+    
     im = ax.imshow(exp_val + offset, interpolation="bicubic", origin="lower", 
-                   extent=[gamma[0], gamma[-1], t[0], t[-1]], aspect='auto')
+                   extent=[t[0], t[-1], gamma[0], gamma[-1]], aspect='auto')
 
     # Add colorbar
     divider = make_axes_locatable(ax)
