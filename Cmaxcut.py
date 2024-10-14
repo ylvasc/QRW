@@ -105,7 +105,7 @@ def initialState(n):  #make |psi_0> = |+> ^(⊗n)
 	return state
 	
 def QWStep(H_cost, H_walk, gamma, t, initial_state):
-	output_state = linalgs.expm_multiply(-1j*(gamma*H_cost+H_walk)*t, initial_state) 
+	output_state = linalgs.expm_multiply(-1j*(gamma*H_walk+H_cost)*t, initial_state) 
 	return output_state
 
 def QW(H_cost, H_walk, t, initial_state, gamma):  
@@ -172,7 +172,49 @@ def costLandscape(H_cost, H_walk, t, initial_state, gamma, offset, fig=None): #o
     #plt.show()
 
 
+def trotterizedQRW(H_cost, H_walk, t, initial_state, gamma, n):
+    U_cost = linalgs.expm(-1j * (H_cost) * (t / n))
+    U_walk = linalgs.expm(-1j * (gamma * H_walk) * (t / n))
 
+    # Initialize the output state as the initial state
+    output_state = initial_state.copy()
 
+    # Apply the Trotterized evolution
+    for _ in range(n):
+        output_state = U_cost.dot(output_state)
+        output_state = U_walk.dot(output_state)
 
+    exp_val = np.real(output_state.conj().T@H_cost@output_state)
+
+    return exp_val
+
+def trotterizedCostLandscape(H_cost, H_walk, t, initial_state, gamma, offset, n, fig=None):
+    # Create a 2D array to store exp_val
+    exp_val = np.zeros((len(t), len(gamma)))
+    
+    # Loop over every combination of t and gamma and calculate exp_val
+    for i in range(len(t)):
+        for j in range(len(gamma)):
+            t_value = np.array([t[i]]) # Current t value, made into array object
+            gamma_value = np.array([gamma[j]])  # Current gamma value, made into array object
+            exp_val[i, j] = trotterizedQRW(H_cost, H_walk, t_value, initial_state, gamma_value, n)
+
+    if fig is None:
+        fig = plt.figure(figsize=(6, 6), dpi=80, facecolor="w", edgecolor="k")
+        
+    ax = fig.gca()
+    ax.set_xlabel(r"$t$")           
+    ax.set_ylabel(r"$\gamma$")      
+    ax.set_title("Cost Landscape")
+    
+    
+    im = ax.imshow(exp_val + offset, interpolation="bicubic", origin="lower", 
+                   extent=[t[0], t[-1], gamma[0], gamma[-1]], aspect='auto')
+
+    # Add colorbar
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    plt.colorbar(im, cax=cax)
+
+    plt.show()
 
