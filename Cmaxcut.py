@@ -9,7 +9,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 importlib.reload(Qmaxcut)
 import utils
 import pyvista as pv
-
+import plotly.graph_objects as go
 
 
 def problemHamiltonianFromIsing(p):  #using inbuilt .to_ising() function
@@ -26,8 +26,6 @@ def problemHamiltonianFromIsing(p):  #using inbuilt .to_ising() function
     qubitOp, offset=Qmaxcut.problemHamiltonian(p)
     H_p = qubitOp.to_matrix()
     return H_p, offset
-
-
 
 def problemHamiltonian(graph):
     """
@@ -71,7 +69,6 @@ def problemHamiltonian(graph):
         hamiltonian_matrix += matrix*0.5*weight
 
     return hamiltonian_matrix*(-1) #-1 for minimization
-
 
 def hypercubeHamiltonian(n):  #hypercube walk hamiltonian
     """
@@ -223,119 +220,6 @@ def trotterizedCostLandscape(H_cost, H_walk, t, initial_state, gamma, offset, n,
         plt.show()
     return exp_val
 
-def trotterizationConvergenceTest(num_graphs, num_nodes, n):
-    #num graph: how many test graphs
-    #num_nodes: how many nodes per test graph
-    #n: how far to take trotterization
-    norms= None
-    x = np.arange(1,n+1)
-    print(x.shape)
-    print(x)
-    for i in range(num_graphs):
-        diff= np.zeros(n)
-        G = utils.createRandomGraph(num_nodes, 0.5) #create a test graph
-        H_cost = problemHamiltonian(G)
-        H_walk = hypercubeHamiltonian(num_nodes)
-        initial_state = initialState(num_nodes)
-        gamma = np.linspace(0, 4, 100)
-        t = np.linspace(0, 6, 100)
-        test_exp_val = costLandscape(H_cost, H_walk, t, initial_state, gamma, 0, fig=None, plot=False) #calculate cost landscape for test graph
-        for i in range(1,n+1):
-            compare_exp_val = trotterizedCostLandscape(H_cost, H_walk, t, initial_state, gamma, 0, i, fig=None, plot=False)
-            difference=test_exp_val-compare_exp_val
-            diff_norm = np.linalg.norm(difference, ord='fro')
-            diff[i-1]= diff_norm
-        if norms == None:
-             norms = diff
-        else: 
-            norms+=diff
-    average_norm = norms/num_graphs
-    plt.figure(figsize=(8, 6))
-    
-    # Plot the data with a muted dark green-blue color
-    plt.plot(x, average_norm, color='#2a536b', linewidth=2)
-    
-    # Label the axes
-    plt.xlabel('Trotterization depth', fontsize=12)
-    plt.ylabel('Difference to QRW result, Frobenius norm', fontsize=12)
-    
-    # Set the title
-    plt.title(f'Difference of Trotterized circuit to QRW circuit, average over {num_graphs} graphs', fontsize=14)
-    
-    # Show grid
-    plt.grid(True, linestyle='--', alpha=0.7)
-    
-    # Display the plot
-    plt.show()
-
-def trotterizationConvergenceTest2(num_graphs, num_nodes, n):
-    """
-    Perform Trotterization convergence test over multiple graphs and plot the results with variance.
-
-    Parameters:
-    - num_graphs: Number of test graphs.
-    - num_nodes: Number of nodes per test graph.
-    - n: Maximum Trotterization depth to test.
-    """
-    # Initialize list to store norms for each graph
-    all_norms = []
-    
-    # x-axis values for Trotterization depths
-    x = np.arange(1, n+1)
-
-    # Loop over num_graphs test graphs
-    for _ in range(num_graphs):
-        diff = np.zeros(n)
-        
-        # Create a random graph and associated Hamiltonians
-        G = utils.createRandomGraph(num_nodes, 0.5)
-        H_cost = problemHamiltonian(G)
-        H_walk = hypercubeHamiltonian(num_nodes)
-        initial_state = initialState(num_nodes)
-        gamma = np.linspace(0, 4, 100)
-        t = np.linspace(0, 6, 100)
-        
-        # Calculate the cost landscape for the test graph
-        test_exp_val = costLandscape(H_cost, H_walk, t, initial_state, gamma, 0, fig=None, plot=False)
-        
-        # Loop over Trotterization depths
-        for i in range(1, n+1):
-            compare_exp_val = trotterizedCostLandscape(H_cost, H_walk, t, initial_state, gamma, 0, i, fig=None, plot=False)
-            difference = test_exp_val - compare_exp_val
-            diff_norm = np.linalg.norm(difference, ord='fro')
-            diff[i-1] = diff_norm
-        
-        # Store the calculated norms
-        all_norms.append(diff)
-    
-    # Convert all_norms list to a NumPy array for easier manipulation
-    all_norms = np.array(all_norms)
-    
-    # Calculate the average and variance if more than 1 graph
-    average_norm = np.mean(all_norms, axis=0)
-    
-    if num_graphs > 1:
-        variance_norm = np.var(all_norms, axis=0)
-        std_dev = np.sqrt(variance_norm)  # Calculate standard deviation for error bars
-    
-    # Plotting
-    plt.figure(figsize=(8, 6))
-    plt.plot(x, average_norm, color='#2a536b', label='Average Frobenius Norm')
-    
-    # If more than 1 graph, plot the variance (as a shaded area)
-    if num_graphs > 1:
-        plt.fill_between(x, average_norm - std_dev, average_norm + std_dev, color='#2a536b', alpha=0.3, label='±1 Std Dev')
-
-    # Label the axes and set the title
-    plt.xlabel('Trotterization depth', fontsize=12)
-    plt.ylabel('Difference to QRW result, Frobenius norm', fontsize=12)
-    plt.title(f'Difference of Trotterized circuit to QRW circuit, average over {num_graphs} graphs', fontsize=14)
-    
-    # Show grid, legend, and plot
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
-    plt.show()
-
 def trotterizationConvergenceTest3(num_graphs, num_nodes, n):
     """
     Perform Trotterization convergence test over multiple graphs and plot the results with variance.
@@ -438,11 +322,25 @@ def costLandscapeNonVarQWOA(H_cost, H_walk, t, initial_state, gamma, beta, p, st
                 exp_val[i, j, k] = nonVarQWOA(H_cost, H_walk, t_value, initial_state, gamma_value, beta_value, p, std_dev)
     
     print(exp_val.min(), exp_val.max())
+    nx, ny, nz = exp_val.shape
+    grid = pv.StructuredGrid()
 
+    # Create a mesh grid for coordinates
+    x = np.linspace(0, t.max(), nx)
+    y = np.linspace(0, gamma.max(), ny)
+    z = np.linspace(0, beta.max(), nz)
+    X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
+
+    # Set points for the grid
+    grid.points = np.c_[X.ravel(), Y.ravel(), Z.ravel()]
+    grid.dimensions = (nx, ny, nz)
+
+    # Flatten `exp_val` in Fortran order and assign to `point_data`
+    grid.point_data["Exp_val"] = exp_val.flatten(order="F")
     # Create the grid
-    grid = pv.UniformGrid()
-    grid.dimensions = exp_val.shape
-    grid.spacing= (1,1,1)
+    #grid = pv.StructuredGrid()
+    #grid.dimensions = exp_val.shape
+    #grid.spacing= (1,1,1)
     
     
     labels = dict(zlabel='beta', xlabel='t', ylabel='gamma')
@@ -450,8 +348,8 @@ def costLandscapeNonVarQWOA(H_cost, H_walk, t, initial_state, gamma, beta, p, st
 
 
 
-    grid.spacing = (t.max() / (len(t) - 1), gamma.max() / (len(gamma) - 1), beta.max() / (len(beta) - 1))
-    grid.point_data["Exp_val"] = exp_val.flatten(order="F")
+    #grid.spacing = (t.max() / (len(t) - 1), gamma.max() / (len(gamma) - 1), beta.max() / (len(beta) - 1))
+    #grid.point_data["Exp_val"] = exp_val.flatten(order="F")
 
     # Set up the plotter
     plotter = pv.Plotter()
@@ -472,6 +370,53 @@ def costLandscapeNonVarQWOA(H_cost, H_walk, t, initial_state, gamma, beta, p, st
     #plotter.camera.view_up = (0, 1, 0)
     #plotter.add_axes(color='black',xlabel='X',ylabel='Y',zlabel='Z')
     # Show the plot
-    plotter.show(jupyter_backend='static')
+    plotter.show()
 
+def costLandscapeNonVarQWOA2(H_cost, H_walk, t, initial_state, gamma, beta, p, std_dev):
+    exp_val = np.zeros((len(t), len(gamma), len(beta)))
+    for i in range(len(t)):
+        for j in range(len(gamma)):
+            for k in range(len(beta)):
+                t_value = np.array([t[i]]) # Current t value, made into array object
+                gamma_value = np.array([gamma[j]])  # Current gamma value, made into array object
+                beta_value =np.array([beta[k]])
+                exp_val[i, j, k] = nonVarQWOA(H_cost, H_walk, t_value, initial_state, gamma_value, beta_value, p, std_dev)
+    
+    print(exp_val.min(), exp_val.max())
+    x, y, z = np.meshgrid(t, gamma, beta, indexing="ij")  # Get the indices for each point in the grid
+    values = exp_val.flatten()            # Flatten to use as the values
 
+    # Plot with Plotly
+    fig = go.Figure(data=go.Scatter3d(
+        x=x.flatten(),
+        y=y.flatten(),
+        z=z.flatten(),
+        mode='markers',
+        marker=dict(
+            size=4,
+            color=values,       # Use values for color
+            colorscale='Viridis', # Choose a colorscale
+            opacity=0.8
+        )
+    ))
+
+    
+    fig.update_layout(scene=dict(
+    xaxis=dict(title='X Axis'),
+    yaxis=dict(title='Y Axis'),
+    zaxis=dict(title='Z Axis'),))
+    fig.update_scenes(xaxis_autorange="reversed")
+    fig.show()
+    #fig.update_layout(
+    #scene_aspectmode='data')
+
+    #fig = go.Figure(data=go.Volume(
+       # x=X.flatten(),
+       # y=Y.flatten(),
+       # value=exp_val.flatten(),
+       # isomin=0.1,
+       # isomax=0.8,
+       # opacity=0.1, # needs to be small to see through all surfaces
+       # surface_count=17, # needs to be a large number for good volume rendering
+       # ))
+    #fig.show()

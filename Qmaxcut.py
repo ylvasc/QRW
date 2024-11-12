@@ -15,6 +15,10 @@ import matplotlib.pyplot as plt
 from qiskit.visualization import plot_histogram
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from qiskit_aer import AerSimulator
+from qiskit.quantum_info import Pauli, Statevector
+from qiskit.circuit import QuantumCircuit, QuantumRegister
+
 
 #make initial states
 def plusStates(n):  #n= number of qubits
@@ -121,8 +125,9 @@ def trotterized_qrw_circuit(G, t, gamma, n):
     N_qubits = len(G.nodes)  
     q = QuantumRegister(N_qubits)
     qc = QuantumCircuit(q)
-
-
+    #initial state
+    for qubit in qc.qubits:
+        qc.h(qubit)
 
     # Define the cost Hamiltonian
     def apply_cost_hamiltonian(qc, G, cost_param):
@@ -148,86 +153,47 @@ def trotterized_qrw_circuit(G, t, gamma, n):
     return qc
 
 
+def compute_expectation_value(qc, G, H_cost):
 
+    simulator = Aer.get_backend('statevector_simulator')
+    result = simulator.run(qc).result()
+    statevector = result.get_statevector(qc)
+    
+    # Now calculate the expectation value of the cost Hamiltonian
+    expectation_value = np.real(np.dot(statevector.conj().T, np.dot(H_cost, statevector)))
+    
+    return expectation_value
 
-
-
-def sample_cost_landscape(G, gamma, t, n, shots=1024, memory=False):
-
+def cost_landscape_trotterized_qw(G, gamma, t, n, H_cost, offset=0, fig=None, plot=True):
+    exp_val = np.zeros((len(t), len(gamma)))
+    
+    # Loop over every combination of t and gamma and calculate exp_val
     for i in range(len(t)):
         for j in range(len(gamma)):
-            gamma_i = gamma[j]
-            t_i = t[i]
-
-            circ = trotterized_qrw_circuit(G, t_1, gamma_i, n)
+            t_value = t[i] # Current t value, made into array object
+            gamma_value = gamma[j]  # Current gamma value, made into array object
+            qc=trotterized_qrw_circuit(G, t_value, gamma_value, n)
+            exp_val[i, j] = compute_expectation_value(qc, G, H_cost)
+    if plot==True:
+        if fig is None:
+            fig = plt.figure(figsize=(6, 6), dpi=80, facecolor="w", edgecolor="k")
             
-
-           
-            job = Aer.get_backend('aer_simulator').run(
-                circ,
-                shots=shots,
-                optimization_level=0,
-                memory=memory,
-            )
-
-            
-            stats = measurement_statistics(job)
-
-    return 
-
-
-import numpy as np
-
-def measurement_statistics(job, stat, problem, memorysize, memory_lists):
-
-    jres = job.result()
-    counts_list = jres.get_counts()
-
-    
-    if memorysize > 0:
-        for i, _ in enumerate(jres.results):
-            memory_list = jres.get_memory(experiment=i)
-            for measurement in memory_list:
-                memory_lists.append(
-                    [measurement, problem.cost(measurement[::-1])]
-                )
-                memorysize -= 1
-                if memorysize < 1:
-                    break
-
-    expectations = []
-    variances = []
-    maxcosts = []
-    mincosts = []
-
-    if isinstance(counts_list, list):
-        for i, counts in enumerate(counts_list):
-            stat.reset()
-            for string in counts:
-                
-                cost = problem.cost(string[::-1])
-                stat.add_sample(cost, counts[string], string[::-1])
-            expectations.append(stat.get_CVaR())
-            variances.append(stat.get_Variance())
-            maxcosts.append(stat.get_max())
-            mincosts.append(stat.get_min())
+        ax = fig.gca()
+        ax.set_xlabel(r"$t$")           
+        ax.set_ylabel(r"$\gamma$")      
+        ax.set_title("Cost Landscape")
         
         
-        return {
-            "Expectations": -np.array(expectations),
-            "Variances": np.array(variances),
-            "MaxCosts": -np.array(maxcosts),
-            "MinCosts": -np.array(mincosts)
-        }
-    else:
-        for string in counts_list:
-            cost = problem.cost(string[::-1])
-            stat.add_sample(cost, counts_list[string], string[::-1])
-    
-    
-    return {
-        "Expectations": [],
-        "Variances": [],
-        "MaxCosts": [],
-        "MinCosts": []
-    }
+        im = ax.imshow(exp_val+offset, interpolation="bicubic", origin="lower", 
+                    extent=[t[0], t[-1], gamma[0], gamma[-1]], aspect='auto')
+
+        # Add colorbar
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        plt.colorbar(im, cax=cax)
+
+        plt.show()
+    return exp_val
+
+
+
